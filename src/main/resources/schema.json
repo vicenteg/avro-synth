@@ -1,0 +1,17 @@
+[
+  {
+    "name": "userId",
+    "class": "name",
+    "type": "first"
+  },
+  {
+    "name": "timestamp",
+    "class": "event",
+    "format": "s",
+    "rate": "52/s"
+  },
+  {
+    "name": "songId",
+    "class": "id"
+  }
+]
