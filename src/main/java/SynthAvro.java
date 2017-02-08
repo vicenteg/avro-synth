@@ -28,14 +28,6 @@ public class SynthAvro {
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(10);
     ObjectMapper synthMapper = new ObjectMapper();
     AvroMapper mapper = new AvroMapper();
-    /*
-    AvroSchemaGenerator gen = new AvroSchemaGenerator();
-    mapper.acceptJsonFormatVisitor(SongStream.class, gen);
-    AvroSchema schemaWrapper = gen.getGeneratedSchema();
-    org.apache.avro.Schema avroSchema = schemaWrapper.getAvroSchema();
-    String avroSchemaAsJson = avroSchema.toString(true);
-    */
-
     CommandLineParser parser = new DefaultParser();
 
     HelpFormatter formatter = new HelpFormatter();
@@ -88,12 +80,12 @@ public class SynthAvro {
     String schemaJson = new String(Files.readAllBytes(Paths.get(schemaFile)));
     SchemaSampler sampler = new SchemaSampler(schemaJson);
 
-    OutputStream w = Files.newOutputStream(Paths.get("/tmp/avrotest.avro"));
     long now = System.currentTimeMillis() / 1000L;
 
     ArrayList<SongStream> songStreams = new ArrayList<SongStream>();
 
     for (long i = 0; i < count; i++) {
+      OutputStream w = Files.newOutputStream(Paths.get("/tmp/avrotest.avro"));
       ObjectWriter ow =  mapper.writer(mapper.schemaFor(SongStream.class));
       JsonNode payload = sampler.sample();
       long sampleTimestamp = payload.get("timestamp").asLong();
