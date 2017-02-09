@@ -85,7 +85,7 @@ public class SynthAvro {
 
     DatumWriter<GenericRecord> ssWriter = new GenericDatumWriter<GenericRecord>(schemaWrapper.getAvroSchema());
     DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(ssWriter);
-    dataFileWriter.create(schemaWrapper.getAvroSchema(), new File("/tmp/avrotest.avro"));
+    dataFileWriter.create(schemaWrapper.getAvroSchema(), new File("/tmp/songstream.avro"));
 
     FileWriter schemaFileWriter = new FileWriter(new File("/tmp/songstream.avsc"));
     schemaFileWriter.write(schemaWrapper.getAvroSchema().toString(true));

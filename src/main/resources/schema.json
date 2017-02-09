@@ -8,7 +8,7 @@
     "name": "timestamp",
     "class": "event",
     "format": "s",
-    "rate": "52/s"
+    "rate": "0.1/s"
   },
   {
     "name": "songId",
