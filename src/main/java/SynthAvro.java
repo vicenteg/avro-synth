@@ -36,6 +36,7 @@ public class SynthAvro {
     HelpFormatter formatter = new HelpFormatter();
     Options options = new Options();
     options.addOption("t", "topic", true, "Pub/sub topic to use (must already exist).");
+    options.addOption("o", "output", true, "Output filename for Avro formatted output.");
     options.addOption("c", "count", true, "Number of messages to generate.");
     options.addOption(
         "r", "realtime", false, "Set this if you want messages emitted in real-time.");
@@ -43,6 +44,7 @@ public class SynthAvro {
     options.addOption("s", "schema", true, "Path to schema file.");
 
     String topicName = null;
+    String outputFilename = null;
     String schemaFile = null;
     Long count = 100L;
     Boolean realtime = false;
@@ -60,8 +62,10 @@ public class SynthAvro {
 
       if (line.hasOption("t")) {
         topicName = line.getOptionValue("t");
-      } else {
-        throw new ParseException("Topic name is required.");
+      }
+
+      if (line.hasOption("o")) {
+        outputFilename = line.getOptionValue("o");
       }
 
       if (line.hasOption("c")) {
@@ -75,9 +79,13 @@ public class SynthAvro {
       if (line.hasOption("f")) {
         emitForever = true;
       }
+
+      if (outputFilename == null && topicName == null) {
+        throw new ParseException("Topic name or output path is required.");
+      }
     } catch (ParseException exp) {
-      formatter.printHelp("pubsubgen", options);
-      System.exit(1);
+      formatter.printHelp(SynthAvro.class.getName(), options);
+      System.exit(0);
     }
 
     String schemaJson = new String(Files.readAllBytes(Paths.get(schemaFile)));
@@ -85,21 +93,20 @@ public class SynthAvro {
 
     DatumWriter<GenericRecord> ssWriter = new GenericDatumWriter<GenericRecord>(schemaWrapper.getAvroSchema());
     DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(ssWriter);
-    dataFileWriter.create(schemaWrapper.getAvroSchema(), new File("/tmp/songstream.avro"));
+    dataFileWriter.create(schemaWrapper.getAvroSchema(), new File(outputFilename));
 
-    FileWriter schemaFileWriter = new FileWriter(new File("/tmp/songstream.avsc"));
-    schemaFileWriter.write(schemaWrapper.getAvroSchema().toString(true));
-    schemaFileWriter.close();
+    do {
+      for (long i = 0; i < count; i++) {
+        GenericRecord songStream = new GenericData.Record(schemaWrapper.getAvroSchema());
+        JsonNode payload = sampler.sample();
+        songStream.put("userId", payload.get("userId").toString());
+        songStream.put("songId", (payload.get("songId")).asInt());
+        songStream.put("timestamp", payload.get("timestamp").asInt());
 
-    for (long i = 0; i < count; i++) {
-      GenericRecord songStream = new GenericData.Record(schemaWrapper.getAvroSchema());
-      JsonNode payload = sampler.sample();
-      songStream.put("userId", payload.get("userId").toString());
-      songStream.put("songId", (payload.get("songId")).asInt());
-      songStream.put("timestamp", payload.get("timestamp").asInt());
+        dataFileWriter.append(songStream);
+      }
+    } while (emitForever);
 
-      dataFileWriter.append(songStream);
-    }
 
     dataFileWriter.close();
     System.exit(0);
