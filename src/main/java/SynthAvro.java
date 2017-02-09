@@ -1,11 +1,14 @@
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.dataformat.avro.AvroFactory;
 import com.fasterxml.jackson.dataformat.avro.AvroMapper;
 import com.fasterxml.jackson.dataformat.avro.AvroSchema;
 import com.fasterxml.jackson.dataformat.avro.schema.AvroSchemaGenerator;
 import com.mapr.synth.samplers.SchemaSampler;
+import org.apache.avro.file.DataFileWriter;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.DatumWriter;
 import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,11 +16,8 @@ import org.slf4j.LoggerFactory;
 import java.io.*;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
 
 /** Created by vincegonzalez on 2/7/17. */
 public class SynthAvro {
@@ -26,9 +26,12 @@ public class SynthAvro {
   public static void main(String[] args)
       throws URISyntaxException, IOException, InterruptedException {
     final ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(10);
-    ObjectMapper synthMapper = new ObjectMapper();
     AvroMapper mapper = new AvroMapper();
     CommandLineParser parser = new DefaultParser();
+
+    AvroSchemaGenerator gen = new AvroSchemaGenerator();
+    mapper.acceptJsonFormatVisitor(SongStream.class, gen);
+    AvroSchema schemaWrapper = gen.getGeneratedSchema();
 
     HelpFormatter formatter = new HelpFormatter();
     Options options = new Options();
@@ -80,21 +83,25 @@ public class SynthAvro {
     String schemaJson = new String(Files.readAllBytes(Paths.get(schemaFile)));
     SchemaSampler sampler = new SchemaSampler(schemaJson);
 
-    long now = System.currentTimeMillis() / 1000L;
+    DatumWriter<GenericRecord> ssWriter = new GenericDatumWriter<GenericRecord>(schemaWrapper.getAvroSchema());
+    DataFileWriter<GenericRecord> dataFileWriter = new DataFileWriter<GenericRecord>(ssWriter);
+    dataFileWriter.create(schemaWrapper.getAvroSchema(), new File("/tmp/avrotest.avro"));
 
-    ArrayList<SongStream> songStreams = new ArrayList<SongStream>();
+    FileWriter schemaFileWriter = new FileWriter(new File("/tmp/songstream.avsc"));
+    schemaFileWriter.write(schemaWrapper.getAvroSchema().toString(true));
+    schemaFileWriter.close();
 
     for (long i = 0; i < count; i++) {
-      OutputStream w = Files.newOutputStream(Paths.get("/tmp/avrotest.avro"));
-      ObjectWriter ow =  mapper.writer(mapper.schemaFor(SongStream.class));
+      GenericRecord songStream = new GenericData.Record(schemaWrapper.getAvroSchema());
       JsonNode payload = sampler.sample();
-      long sampleTimestamp = payload.get("timestamp").asLong();
-      long delayInMillis = (sampleTimestamp - now) * 1000;
-      String messageString = payload.toString();
-      SongStream ss = synthMapper.treeToValue(payload, SongStream.class);
-      ow.writeValue(w, ss);
+      songStream.put("userId", payload.get("userId").toString());
+      songStream.put("songId", (payload.get("songId")).asInt());
+      songStream.put("timestamp", payload.get("timestamp").asInt());
+
+      dataFileWriter.append(songStream);
     }
 
+    dataFileWriter.close();
     System.exit(0);
   }
 }

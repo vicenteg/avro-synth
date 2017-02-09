@@ -1,6 +1,4 @@
-/**
- * Created by vincegonzalez on 2/8/17.
- */
+/** Created by vincegonzalez on 2/8/17. */
 
 /*
 {"namespace": "example.hdfs2cass",
@@ -15,32 +13,31 @@
  */
 
 public class SongStream {
- String userId;
-  long timestamp;
- long songId;
+  String userId;
+  int timestamp;
+  int songId;
 
- public void setUserId(String id) {
-   userId = id;
- }
+  public void setUserId(String id) {
+    userId = id;
+  }
 
- public String getUserId() {
-   return userId;
- }
+  public String getUserId() {
+    return userId;
+  }
 
- public void setTimestamp(long t) {
-   timestamp = t;
- }
+  public void setTimestamp(int t) {
+    timestamp = t;
+  }
 
- public long getTimestamp() {
-   return timestamp;
- }
+  public int getTimestamp() {
+    return timestamp;
+  }
 
- public void setSongId(long id) {
-   songId = id;
- }
+  public void setSongId(int id) {
+    songId = id;
+  }
 
- public long songId() {
-   return songId();
- }
-
+  public int getSongId() {
+    return songId;
+  }
 }
